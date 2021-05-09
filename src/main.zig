@@ -12,9 +12,6 @@ usingnamespace @cImport({
     @cInclude("errno.h");
     @cInclude("stdintfix.h"); // NB: Required as zig is unable to process some macros
 
-    @cInclude("SDL2/SDL.h");
-    @cInclude("SDL2/SDL_syswm.h");
-
     @cInclude("GL/gl.h");
     @cInclude("GL/glx.h");
     @cInclude("GL/glext.h");
@@ -22,12 +19,17 @@ usingnamespace @cImport({
     @cInclude("bgfx/c99/bgfx.h");
 });
 
-fn sdlSetWindow(window: *SDL_Window) !void {
-    var wmi: SDL_SysWMinfo = undefined;
-    wmi.version.major = SDL_MAJOR_VERSION;
-    wmi.version.minor = SDL_MINOR_VERSION;
-    wmi.version.patch = SDL_PATCHLEVEL;
-    if (SDL_GetWindowWMInfo(window, &wmi) == .SDL_FALSE) {
+const sdl = @cImport({
+    @cInclude("SDL2/SDL.h");
+    @cInclude("SDL2/SDL_syswm.h");
+});
+
+fn sdlSetWindow(window: *sdl.SDL_Window) !void {
+    var wmi: sdl.SDL_SysWMinfo = undefined;
+    wmi.version.major = sdl.SDL_MAJOR_VERSION;
+    wmi.version.minor = sdl.SDL_MINOR_VERSION;
+    wmi.version.patch = sdl.SDL_PATCHLEVEL;
+    if (sdl.SDL_GetWindowWMInfo(window, &wmi) == .SDL_FALSE) {
         return error.SDL_FAILED_INIT;
     }
 
@@ -40,7 +42,7 @@ fn sdlSetWindow(window: *SDL_Window) !void {
         pd.ndt = wmi.info.x11.display;
         pd.nwh = meta.cast(*c_void, wmi.info.x11.window);
     }
-    if (builtin.os.tag == .macosx) {
+    if (builtin.os.tag == .macos) {
         pd.ndt = NULL;
         pd.nwh = wmi.info.cocoa.window;
     }
@@ -59,10 +61,12 @@ fn sdlSetWindow(window: *SDL_Window) !void {
 }
 
 pub fn main() !void {
-    _ = SDL_Init(0);
-    defer SDL_Quit();
-    const window = SDL_CreateWindow("bgfx", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE).?;
-    defer SDL_DestroyWindow(window);
+    const out = std.io.getStdOut().writer();
+    try out.print("Hello, {s}!\n", .{"world"});
+    _ = sdl.SDL_Init(0);
+    defer sdl.SDL_Quit();
+    const window = sdl.SDL_CreateWindow("bgfx", sdl.SDL_WINDOWPOS_UNDEFINED, sdl.SDL_WINDOWPOS_UNDEFINED, 800, 600, sdl.SDL_WINDOW_SHOWN | sdl.SDL_WINDOW_RESIZABLE).?;
+    defer sdl.SDL_DestroyWindow(window);
     try sdlSetWindow(window);
 
     var in = std.mem.zeroes(bgfx_init_t);
@@ -81,18 +85,18 @@ pub fn main() !void {
 
     var frame_number: u64 = 0;
     gameloop: while (true) {
-        var event: SDL_Event = undefined;
+        var event: sdl.SDL_Event = undefined;
         var should_exit = false;
-        while (SDL_PollEvent(&event) == 1) {
+        while (sdl.SDL_PollEvent(&event) == 1) {
             switch (event.type) {
-                SDL_QUIT => should_exit = true,
+                sdl.SDL_QUIT => should_exit = true,
 
-                SDL_WINDOWEVENT => {
+                sdl.SDL_WINDOWEVENT => {
                     const wev = &event.window;
                     switch (wev.event) {
-                        SDL_WINDOWEVENT_RESIZED, SDL_WINDOWEVENT_SIZE_CHANGED => {},
+                        sdl.SDL_WINDOWEVENT_RESIZED, sdl.SDL_WINDOWEVENT_SIZE_CHANGED => {},
 
-                        SDL_WINDOWEVENT_CLOSE => should_exit = true,
+                        sdl.SDL_WINDOWEVENT_CLOSE => should_exit = true,
 
                         else => {},
                     }
