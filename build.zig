@@ -1,12 +1,12 @@
-const Builder = @import("std").build.Builder;
+const std = @import("std");
+const Builder = std.build.Builder;
+const fs = std.fs;
+const File = std.fs.File;
 
 pub fn build(b: *Builder) void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
     const exe = b.addExecutable("game", "src/main.zig");
-
-    const git_sub_cmd = [_][]const u8{ "git", "submodule", "update", "--init", "--recursive" };
-    const fetch_subs = b.addSystemCommand(&git_sub_cmd);
 
     exe.addIncludeDir("src");
 
@@ -61,6 +61,8 @@ pub fn build(b: *Builder) void {
     exe.addIncludeDir(bgfx ++ "src/");
     exe.addCSourceFile(bgfx ++ "src/amalgamated.cpp", &cxx_options);
 
+
+
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.install();
@@ -71,6 +73,30 @@ pub fn build(b: *Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
+
+    // Fetch and Codegen stuff
+
+    const git_sub_cmd = [_][]const u8{ "git", "submodule", "update", "--init", "--recursive" };
+    const fetch_subs = b.addSystemCommand(&git_sub_cmd);
+
+    
+
+    const codegen_step = b.step("codegen", "Generating bgfx wrapper");
+    codegen_step.makeFn = codegen;
+
     const fetch_step = b.step("fetch", "Fetch submodules");
     fetch_step.dependOn(&fetch_subs.step);
+}
+
+
+fn codegen(self: *std.build.Step) !void {
+    // READ-FILE: https://zigforum.org/t/read-file-or-buffer-by-line/317/4
+    var file = try std.fs.cwd().openFile("submodules/bgfx/include/bgfx/c99/bgfx.h", .{});
+    defer file.close();
+    var buf_reader = std.io.bufferedReader(file.reader());
+    var in_stream = buf_reader.reader();
+    var buf: [1024]u8 = undefined;
+    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        std.debug.print("{s}\n", .{line});
+    }
 }
