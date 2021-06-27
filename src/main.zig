@@ -166,7 +166,7 @@ pub fn main() !void {
     bgfx_set_view_clear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF, 1.0, 0);
     bgfx_set_view_rect(0, 0, 0, 800, 600);
 
-    const pcvDecl = bgfx_vertex_decl;
+    // const pcvDecl = bgfx_vertex_decl;
     // pcvDecl.begin()
     //     .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
     //     .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)

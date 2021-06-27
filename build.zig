@@ -1,14 +1,20 @@
-const std = @import("std");
-const Builder = std.build.Builder;
-const fs = std.fs;
-const File = std.fs.File;
+const Builder = @import("std").build.Builder;
 
 pub fn build(b: *Builder) void {
+    // Standard target options allows the person running `zig build` to choose
+    // what target to build for. Here we do not override the defaults, which
+    // means any target is allowed, and the default is native. Other options
+    // for restricting supported target set are available.
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
-    const exe = b.addExecutable("game", "src/main.zig");
 
+    // Standard release options allow the person running `zig build` to select
+    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
+    const mode = b.standardReleaseOptions();
+
+    const exe = b.addExecutable("game", "src/main.zig");
     exe.addIncludeDir("src");
+    
+    exe.linkSystemLibrary("c");
 
     exe.linkLibC();
     exe.linkSystemLibrary("c++");
@@ -61,42 +67,25 @@ pub fn build(b: *Builder) void {
     exe.addIncludeDir(bgfx ++ "src/");
     exe.addCSourceFile(bgfx ++ "src/amalgamated.cpp", &cxx_options);
 
-
-
+    // exe.setTarget(builtin.Arch.x86_64, .windows, .msvc);
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.install();
 
     const run_cmd = exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
 
-    // Fetch and Codegen stuff
+    
 
     const git_sub_cmd = [_][]const u8{ "git", "submodule", "update", "--init", "--recursive" };
     const fetch_subs = b.addSystemCommand(&git_sub_cmd);
-
-    
-
-    const codegen_step = b.step("codegen", "Generating bgfx wrapper");
-    codegen_step.makeFn = codegen;
-
     const fetch_step = b.step("fetch", "Fetch submodules");
     fetch_step.dependOn(&fetch_subs.step);
-}
-
-
-fn codegen(self: *std.build.Step) !void {
-    // READ-FILE: https://zigforum.org/t/read-file-or-buffer-by-line/317/4
-    var file = try std.fs.cwd().openFile("submodules/bgfx/include/bgfx/c99/bgfx.h", .{});
-    defer file.close();
-    var buf_reader = std.io.bufferedReader(file.reader());
-    var in_stream = buf_reader.reader();
-    var buf: [1024]u8 = undefined;
-    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        std.debug.print("{s}\n", .{line});
-    }
 }
